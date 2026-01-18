@@ -1,0 +1,16 @@
+FROM python:3.9-slim
+
+# Устанавливаем зависимости
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем Python библиотеки
+RUN pip install pyserial paho-mqtt
+
+# Создаем скрипт моста
+WORKDIR /app
+COPY serial-mqtt-bridge.py .
+
+# Запускаем мост
+CMD ["python", "serial-mqtt-bridge.py"]

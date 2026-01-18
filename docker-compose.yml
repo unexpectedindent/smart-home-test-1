@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Home Assistant - основной сервер умного дома
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    volumes:
+      - ./homeassistant:/config
+    ports:
+      - "8123:8123"
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Moscow  # Указываем временную зону
+    networks:
+      - smart-home-net
+
+  # MQTT брокер для общения с ESP8266
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+    restart: unless-stopped
+    # Без volumes - используем стандартную конфигурацию
+    networks:
+      - smart-home-net
+
+  # Node-RED для визуального программирования
+  node-red:
+    image: nodered/node-red
+    container_name: node-red
+    ports:
+      - "1880:1880"
+    environment:
+      - TZ=Europe/Moscow
+    restart: unless-stopped
+    networks:
+      - smart-home-net
+
+  serial-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile.serial-bridge
+    container_name: serial-bridge
+    restart: unless-stopped
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    environment:
+      - SERIAL_PORT=/dev/ttyUSB0
+      - BAUD_RATE=115200
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+    depends_on:
+      - mosquitto
+    networks:
+      - smart-home-net
+
+
+networks:
+  smart-home-net:
+    driver: bridge
